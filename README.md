@@ -8,9 +8,11 @@ A 2048 game implement by flutter.
 
 * Adaptive resolution.
 
+* Gesture & Keyboard support.
+
 * Slide animation.
 
-* Operation History (`undo` button).
+* Operation history (`undo` button).
 
 WARNING! It's a experimental project developed for learning purpose. Please expect breaking changes and unstable APIs. Most of them are currently at an early, experimental stage.
 
