@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.flutter_2048">
+    package="com.github.xaxys.flutter_2048">
    <application
         android:label="flutter_2048"
         android:icon="@mipmap/ic_launcher">
