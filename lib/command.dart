@@ -18,6 +18,10 @@ class Status {
   final bool success;
   final dynamic obj;
   Status(this.success, [this.obj]);
+
+  void then(void Function(dynamic) func) {
+    if (this.success) func(obj);
+  }
 }
 
 abstract class Command {

@@ -4,6 +4,12 @@ import 'config.dart';
 import 'chessboard.dart';
 import 'tile.dart';
 
+extension on List<List<PointInfo>> {
+  void forEachPoint(void Function(PointInfo) func) {
+    this.forEach((list) => list.forEach((elem) => func(elem)));
+  }
+}
+
 class Grid extends StatefulWidget {
   final List<List<PointInfo>> pointInfo;
   final double tileSize;
@@ -36,9 +42,9 @@ class _GridState extends State<Grid> with SingleTickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
 
     bool hasAnimation = false;
-    widget.pointInfo.forEach((list) => list.forEach((info) {
-          if (info.action != TileAction.NONE) hasAnimation = true;
-        }));
+    widget.pointInfo.forEachPoint((info) {
+      if (info.action != TileAction.NONE) hasAnimation = true;
+    });
     if (!hasAnimation) return;
 
     controller.reset();
@@ -48,8 +54,8 @@ class _GridState extends State<Grid> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     List<Widget> grids = [];
-    widget.pointInfo.forEach(
-      (list) => list.forEach((info) {
+    widget.pointInfo.forEachPoint(
+      (info) {
         Widget tile;
         switch (info.action) {
           case TileAction.MOVE:
@@ -72,7 +78,7 @@ class _GridState extends State<Grid> with SingleTickerProviderStateMixin {
             break;
         }
         grids.add(tile);
-      }),
+      },
     );
     double spacing = (widget.tileSize * 0.08).floorToDouble();
     return Stack(

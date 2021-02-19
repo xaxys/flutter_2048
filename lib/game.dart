@@ -23,6 +23,7 @@ class Game {
     SharedPreferences.getInstance().then((v) {
       inst = v;
       highScore = v.getInt("high_score") ?? 0;
+      notify(updateListeners);
     });
     GenerateCommand(chessboard).execute();
     GenerateCommand(chessboard).execute();
@@ -37,19 +38,14 @@ class Game {
   }
 
   void updateScore() {
-    if (chessboard.score != score) {
-      if (chessboard.score < score) {
-        highScore = inst.getInt("high_score") ?? 0;
-      } else if (chessboard.score > highScore) {
-        highScore = chessboard.score;
-        Command command = HighScoreUpdateCommand(inst, highScore)..execute();
-        commandHistory.add(command);
-      }
-      score = chessboard.score;
+    if (chessboard.score > highScore) {
+      highScore = chessboard.score;
+      execute(HighScoreUpdateCommand(inst, highScore));
     }
+    score = chessboard.score;
   }
 
-  void notify(List listeners, dynamic arg) {
+  void notify(List listeners, [dynamic arg]) {
     listeners.forEach((listener) => listener(arg));
   }
 
@@ -59,34 +55,37 @@ class Game {
     GenerateCommand(chessboard).execute();
     commandHistory.clear();
     score = 0;
+    notify(updateListeners);
+  }
+
+  Status execute(Command command) {
+    return command.execute()
+      ..then((_) {
+        commandHistory.add(command);
+        updateScore();
+      });
   }
 
   void operate(Gesture gesture) {
-    Command command = OperateCommand(gesture, chessboard);
-    var result = command.execute();
-    if (result.success) {
-      commandHistory.add(command);
-      notify(operateListeners, result.obj);
-      updateScore();
-    }
+    execute(OperateCommand(gesture, chessboard))
+      ..then((obj) => notify(operateListeners, obj));
   }
 
   void generate() {
-    Command command = GenerateCommand(chessboard);
-    var result = command.execute();
-    if (result.success) {
-      commandHistory.add(command);
-      notify(generateListeners, result.obj);
-    }
+    execute(GenerateCommand(chessboard))
+      ..then((obj) => notify(generateListeners, obj));
   }
 
   bool undo() {
     while (commandHistory.isNotEmpty) {
       Command command = commandHistory.last..undo();
       commandHistory.removeLast();
+      if (command is HighScoreUpdateCommand) {
+        highScore = inst.getInt("high_score") ?? 0;
+      }
       if (command is OperateCommand) {
         updateScore();
-        notify(updateListeners, chessboard.toPointInfo());
+        notify(updateListeners);
         return true;
       }
     }

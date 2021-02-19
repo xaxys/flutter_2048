@@ -42,16 +42,18 @@ class _HomePageState extends State<HomePage> {
   void initGame() {
     game.operateListeners.add((info) {
       aniQueue.clear();
-      aniQueue.addLast(info);
-      refresh();
+      if (info != null) aniQueue.addLast(info);
       game.generate();
+      refresh();
     });
     game.updateListeners.add((info) {
       aniQueue.clear();
-      aniQueue.addLast(info);
+      if (info != null) aniQueue.addLast(info);
       refresh();
     });
-    game.generateListeners.add((info) => aniQueue.addLast(info));
+    game.generateListeners.add((info) {
+      if (info != null) aniQueue.addLast(info);
+    });
     refresh();
   }
 

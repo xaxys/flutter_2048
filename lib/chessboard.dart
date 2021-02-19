@@ -42,6 +42,7 @@ class Chessboard {
   }
 
   void clear() {
+    score = 0;
     grid = List.generate(scale, (_) => List.filled(scale, 0), growable: false);
   }
 
@@ -53,11 +54,10 @@ class Chessboard {
   }
 
   void restore(Snapshot snapshot) {
-    Chessboard clone = snapshot.clone;
-    this.scale = clone.scale;
+    this.scale = snapshot.clone.scale;
     this.clear();
-    clone.forEach((i, j, value) => this.grid[i][j] = value);
-    this.score = clone.score;
+    snapshot.clone.forEach((i, j, value) => this.grid[i][j] = value);
+    this.score = snapshot.clone.score;
   }
 
   List<List<PointInfo>> toPointInfo() {
