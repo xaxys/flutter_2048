@@ -1,75 +1,95 @@
-import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
 
-enum Gesture { UP, DOWN, LEFT, RIGHT }
-enum TileAction { NONE, MOVE, APPEAR, COMBINE }
+import 'command.dart';
+import 'config.dart';
+import 'chessboard.dart';
 
-class PointInfo {
-  Point<int> orig;
-  Point<double> move;
-  TileAction action;
-  int value;
-
-  PointInfo(int i, int j, this.value, [this.action = TileAction.NONE]) {
-    orig = Point(i, j);
-    move = Point(0, 0);
-  }
-
-  void setMove(List<int> targetPos) {
-    int x = targetPos[1] - orig.y;
-    int y = targetPos[0] - orig.x;
-    move = Point(x.toDouble(), y.toDouble());
-    action = TileAction.MOVE;
-  }
-
-  void setAppear(int num) {
-    value = num;
-    action = TileAction.APPEAR;
-  }
-
-  void setCombine(int num) {
-    value = num;
-    action = TileAction.APPEAR;
-  }
-}
+typedef GridListener = void Function(List<List<PointInfo>>);
+typedef ScoreListener = void Function(int);
 
 class Game {
-  int scale;
   int score = 0;
-  List<List<int>> grid;
-  List<List<PointInfo>> modify;
+  int highScore = 0;
+  SharedPreferences inst;
+  Chessboard chessboard = Chessboard(Config.SCALE);
+  List<Command> commandHistory = [];
+  // Listeners
+  List<GridListener> operateListeners = [];
+  List<GridListener> generateListeners = [];
+  List<GridListener> updateListeners = [];
+  List<ScoreListener> scoreListeners = [];
 
-  Game(this.scale) {
-    grid = List.generate(scale, (_) => List.filled(scale, 0));
+  Game() {
+    SharedPreferences.getInstance().then((v) {
+      inst = v;
+      highScore = v.getInt("high_score") ?? 0;
+    });
+    GenerateCommand(chessboard).execute();
+    GenerateCommand(chessboard).execute();
   }
 
-  List<List<PointInfo>> getGrid() {
-    return List.generate(
-      scale,
-      (i) => List.generate(
-        scale,
-        (j) => PointInfo(i, j, grid[i][j]),
-      ),
-    );
-  }
-
-  List<Point<int>> freeList() {
-    List<Point<int>> options = [];
-    for (int i = 0; i < scale; i++) {
-      for (int j = 0; j < scale; j++) {
-        if (grid[i][j] == 0) options.add(Point(i, j));
-      }
-    }
-    return options;
+  List<List<PointInfo>> getPointInfo() {
+    return chessboard.toPointInfo();
   }
 
   bool isGameOver() {
-    for (int i = 0; i < scale; i++) {
-      for (int j = 0; j < scale; j++) {
-        if (grid[i][j] == 0) return false;
-        if (i < scale - 1 && grid[i][j] == grid[i + 1][j]) return false;
-        if (j < scale - 1 && grid[i][j] == grid[i][j + 1]) return false;
+    return chessboard.isGameOver();
+  }
+
+  void updateScore() {
+    if (chessboard.score != score) {
+      if (chessboard.score < score) {
+        highScore = inst.getInt("high_score") ?? 0;
+      } else if (chessboard.score > highScore) {
+        highScore = chessboard.score;
+        Command command = HighScoreUpdateCommand(inst, highScore)..execute();
+        commandHistory.add(command);
+      }
+      score = chessboard.score;
+    }
+  }
+
+  void notify(List listeners, dynamic arg) {
+    listeners.forEach((listener) => listener(arg));
+  }
+
+  void restart() {
+    chessboard.clear();
+    GenerateCommand(chessboard).execute();
+    GenerateCommand(chessboard).execute();
+    commandHistory.clear();
+    score = 0;
+  }
+
+  void operate(Gesture gesture) {
+    Command command = OperateCommand(gesture, chessboard);
+    var result = command.execute();
+    if (result.success) {
+      commandHistory.add(command);
+      notify(operateListeners, result.obj);
+      updateScore();
+    }
+  }
+
+  void generate() {
+    Command command = GenerateCommand(chessboard);
+    var result = command.execute();
+    if (result.success) {
+      commandHistory.add(command);
+      notify(generateListeners, result.obj);
+    }
+  }
+
+  bool undo() {
+    while (commandHistory.isNotEmpty) {
+      Command command = commandHistory.last..undo();
+      commandHistory.removeLast();
+      if (command is OperateCommand) {
+        updateScore();
+        notify(updateListeners, chessboard.toPointInfo());
+        return true;
       }
     }
-    return true;
+    return false;
   }
 }

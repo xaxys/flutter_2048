@@ -1,12 +1,13 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'board.dart';
+import 'grid.dart';
 import 'config.dart';
-import 'game.dart';
+import 'chessboard.dart';
 
-import 'gamecontroller.dart';
+import 'game.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -16,11 +17,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  GameController gameCtrl = GameController();
+  Game game = Game();
   List<List<PointInfo>> pointInfo;
+  Queue<List<List<PointInfo>>> aniQueue = Queue();
 
   void handleGesture(Gesture gesture) {
-    gameCtrl.operate(gesture);
+    game.operate(gesture);
   }
 
   void onAnimationFinished() {
@@ -28,16 +30,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   void refresh() {
-    setState(() => pointInfo = gameCtrl.getGrid());
+    setState(() {
+      if (aniQueue.isEmpty) {
+        pointInfo = game.getPointInfo();
+      } else {
+        pointInfo = aniQueue.removeFirst();
+      }
+    });
   }
 
   void initGame() {
-    gameCtrl.operateListeners.add((info) => setState(() {
-          pointInfo = info;
-          gameCtrl.generate();
-        }));
-    // gameCtrl.generateListeners.add((info) => pointInfo = info);
-    gameCtrl.updateListeners.add((info) => setState(() => pointInfo = info));
+    game.operateListeners.add((info) {
+      aniQueue.clear();
+      aniQueue.addLast(info);
+      refresh();
+      game.generate();
+    });
+    game.updateListeners.add((info) {
+      aniQueue.clear();
+      aniQueue.addLast(info);
+      refresh();
+    });
+    game.generateListeners.add((info) => aniQueue.addLast(info));
     refresh();
   }
 
@@ -93,7 +107,7 @@ class _HomePageState extends State<HomePage> {
                       Padding(
                         padding: EdgeInsets.only(bottom: 2.0),
                         child: Text(
-                          '${gameCtrl.score}',
+                          '${game.score}',
                           style: TextStyle(
                             fontSize: tileSize * 0.25,
                             color: Colors.white,
@@ -135,8 +149,7 @@ class _HomePageState extends State<HomePage> {
                               return;
                             }
                           },
-                          child:
-                              Board(tileSize, pointInfo, onAnimationFinished),
+                          child: Grid(tileSize, pointInfo, onAnimationFinished),
                         ),
                         onVerticalDragEnd: (DragEndDetails details) {
                           //primaryVelocity -ve up +ve down
@@ -156,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                         },
                       ),
                     ),
-                    gameCtrl.isGameOver()
+                    game.isGameOver()
                         ? Container(
                             height: height,
                             color: Config.COLOR_WHITE_MASK,
@@ -198,7 +211,7 @@ class _HomePageState extends State<HomePage> {
                                   Icons.refresh,
                                   color: Colors.white70,
                                 ),
-                                onPressed: gameCtrl.restart),
+                                onPressed: game.restart),
                           ),
                         ),
                         Container(
@@ -222,7 +235,7 @@ class _HomePageState extends State<HomePage> {
                                     color: Colors.white70,
                                   ),
                                 ),
-                                onPressed: gameCtrl.undo,
+                                onPressed: game.undo,
                               ),
                             ),
                           ),
@@ -248,7 +261,7 @@ class _HomePageState extends State<HomePage> {
                                         fontWeight: FontWeight.bold),
                                   ),
                                   Text(
-                                    "${gameCtrl.highScore}",
+                                    "${game.highScore}",
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: tileSize * 0.15,

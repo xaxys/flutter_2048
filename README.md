@@ -1,6 +1,6 @@
 # flutter_2048
 
-A 2048 game implement by flutter.
+A 2048 game implemented by flutter.
 
 ## Features
 

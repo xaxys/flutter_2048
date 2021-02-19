@@ -52,6 +52,24 @@ class AnimatedMoveTile extends AnimatedWidget {
   }
 }
 
+class AnimatedSizeTile extends AnimatedWidget {
+  final int num;
+  final double size;
+  final Animation<double> animation;
+  AnimatedSizeTile(this.num, this.size, this.animation)
+      : super(listenable: animation);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizeTransition(
+      sizeFactor: listenable,
+      child: Container(
+        child: StaticTile(num, animation.value),
+      ),
+    );
+  }
+}
+
 class TileEmpty extends StatelessWidget {
   final double size;
   TileEmpty(this.size);

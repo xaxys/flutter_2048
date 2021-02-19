@@ -1,23 +1,22 @@
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
-import 'game.dart';
+import 'chessboard.dart';
 import 'tile.dart';
 
-class Board extends StatefulWidget {
+class Grid extends StatefulWidget {
   final List<List<PointInfo>> pointInfo;
   final double tileSize;
   final void Function() animateFinishCallback;
-  Board(this.tileSize, this.pointInfo, this.animateFinishCallback);
+  Grid(this.tileSize, this.pointInfo, this.animateFinishCallback);
 
   @override
-  _BoardState createState() => _BoardState();
+  _GridState createState() => _GridState();
 }
 
-class _BoardState extends State<Board> with SingleTickerProviderStateMixin {
+class _GridState extends State<Grid> with SingleTickerProviderStateMixin {
   AnimationController controller;
-
-  _BoardState();
+  _GridState();
 
   @override
   void initState() {
@@ -33,15 +32,26 @@ class _BoardState extends State<Board> with SingleTickerProviderStateMixin {
   }
 
   @override
+  void didUpdateWidget(Grid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    bool hasAnimation = false;
+    widget.pointInfo.forEach((list) => list.forEach((info) {
+          if (info.action != TileAction.NONE) hasAnimation = true;
+        }));
+    if (!hasAnimation) return;
+
+    controller.reset();
+    controller.forward();
+  }
+
+  @override
   Widget build(BuildContext context) {
     List<Widget> grids = [];
     widget.pointInfo.forEach(
       (list) => list.forEach((info) {
         Widget tile;
         switch (info.action) {
-          case TileAction.NONE:
-            tile = StaticTile(info.value, widget.tileSize);
-            break;
           case TileAction.MOVE:
             var animation = Tween(
               begin: Offset.zero,
@@ -49,13 +59,21 @@ class _BoardState extends State<Board> with SingleTickerProviderStateMixin {
             ).animate(controller);
             tile = AnimatedMoveTile(info.value, widget.tileSize, animation);
             break;
+          case TileAction.APPEAR:
+            var animation = Tween(
+              begin: 0.0,
+              end: widget.tileSize,
+            ).animate(controller);
+            tile = AnimatedSizeTile(info.value, widget.tileSize, animation);
+            break;
+          case TileAction.NONE:
           default:
+            tile = StaticTile(info.value, widget.tileSize);
+            break;
         }
         grids.add(tile);
       }),
     );
-    controller.reset();
-    controller.forward();
     double spacing = (widget.tileSize * 0.08).floorToDouble();
     return Stack(
       children: [
